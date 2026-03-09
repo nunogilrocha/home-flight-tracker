@@ -1,0 +1,9 @@
+{
+  "name": "home-flight-tracker",
+  "version": "1.0.0",
+  "description": "Real-time Lisbon airport arrivals & departures dashboard",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
