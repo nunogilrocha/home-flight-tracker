@@ -34,6 +34,30 @@
   --grid: 88px 52px 1fr 110px 88px;
 }
 
+[data-theme="light"] {
+  --bg:           #dfe6ef;
+  --surface:      #eaf0f7;
+  --surface-2:    #d4dde8;
+  --border:       rgba(0,0,0,0.08);
+  --border-strong:rgba(0,0,0,0.18);
+
+  --cyan:         #0284c7;
+  --cyan-dim:     rgba(2,132,199,0.12);
+  --cyan-bg:      rgba(2,132,199,0.07);
+
+  --amber:        #b45309;
+  --amber-dim:    rgba(180,83,9,0.12);
+  --amber-bg:     rgba(180,83,9,0.07);
+
+  --green:        #16a34a;
+  --green-dim:    rgba(22,163,74,0.15);
+  --red:          #dc2626;
+  --red-dim:      rgba(220,38,38,0.15);
+
+  --text:         #0f172a;
+  --text-muted:   #64748b;
+  --text-dim:     #334155;
+}
 
 html, body {
   height: 100%;
@@ -443,3 +467,20 @@ html, body {
   .panels { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
 }
 
+/* ── Theme toggle button ─────────────────────────────────────────── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--border-strong); color: var(--text); }
+.theme-toggle svg   { width: 14px; height: 14px; }
