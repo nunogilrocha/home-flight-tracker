@@ -43,6 +43,7 @@ const AIRPORTS = {
   EGPF: { city: "Glasgow",        country: "UK",           flag: "🇬🇧" },
   EGBB: { city: "Birmingham",     country: "UK",           flag: "🇬🇧" },
   EGGD: { city: "Bristol",        country: "UK",           flag: "🇬🇧" },
+  EGMC: { city: "London Southend", country: "UK",          flag: "🇬🇧" },
   EGAA: { city: "Belfast",        country: "UK",           flag: "🇬🇧" },
   EGNT: { city: "Newcastle",      country: "UK",           flag: "🇬🇧" },
 
@@ -145,11 +146,16 @@ const AIRPORTS = {
   SBBR: { city: "Brasília",       country: "Brazil",       flag: "🇧🇷" },
   SBGL: { city: "Rio de Janeiro", country: "Brazil",       flag: "🇧🇷" },
   SBKP: { city: "Campinas",       country: "Brazil",       flag: "🇧🇷" },
+  SBCF: { city: "Belo Horizonte", country: "Brazil",       flag: "🇧🇷" },
   SBSV: { city: "Salvador",       country: "Brazil",       flag: "🇧🇷" },
   SBFZ: { city: "Fortaleza",      country: "Brazil",       flag: "🇧🇷" },
   SBRF: { city: "Recife",         country: "Brazil",       flag: "🇧🇷" },
   SBBE: { city: "Belém",          country: "Brazil",       flag: "🇧🇷" },
   SBMN: { city: "Manaus",         country: "Brazil",       flag: "🇧🇷" },
+  SBFL: { city: "Florianópolis",  country: "Brazil",       flag: "🇧🇷" },
+  SBPA: { city: "Porto Alegre",   country: "Brazil",       flag: "🇧🇷" },
+  SBCT: { city: "Curitiba",       country: "Brazil",       flag: "🇧🇷" },
+  SBNT: { city: "Natal",          country: "Brazil",       flag: "🇧🇷" },
 
   // North America
   KJFK: { city: "New York JFK",   country: "USA",          flag: "🇺🇸" },
@@ -160,6 +166,8 @@ const AIRPORTS = {
   KPHL: { city: "Philadelphia",   country: "USA",          flag: "🇺🇸" },
   KORD: { city: "Chicago",        country: "USA",          flag: "🇺🇸" },
   KATL: { city: "Atlanta",        country: "USA",          flag: "🇺🇸" },
+  KLAX: { city: "Los Angeles",    country: "USA",          flag: "🇺🇸" },
+  KSFO: { city: "San Francisco",  country: "USA",          flag: "🇺🇸" },
   CYYZ: { city: "Toronto",        country: "Canada",       flag: "🇨🇦" },
   CYUL: { city: "Montréal",       country: "Canada",       flag: "🇨🇦" },
   CYVR: { city: "Vancouver",      country: "Canada",       flag: "🇨🇦" },
