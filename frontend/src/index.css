@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ── Theme ─────────────────────────────────────────────────────── */
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+
+  --color-bg: #08090f;
+  --color-surface: #0d1017;
+  --color-surface-2: #131825;
+  --color-border: rgba(255,255,255,0.06);
+  --color-border-strong: rgba(255,255,255,0.14);
+
+  --color-cyan: #22d3ee;
+  --color-cyan-dim: rgba(34,211,238,0.12);
+  --color-cyan-bg: rgba(34,211,238,0.06);
+
+  --color-amber: #f59e0b;
+  --color-amber-dim: rgba(245,158,11,0.12);
+  --color-amber-bg: rgba(245,158,11,0.06);
+
+  --color-green: #4ade80;
+  --color-green-dim: rgba(74,222,128,0.15);
+  --color-red: #f87171;
+  --color-red-dim: rgba(248,113,113,0.15);
+
+  --color-text: #e2e8f0;
+  --color-text-muted: #64748b;
+  --color-text-dim: #94a3b8;
+
+  --radius-panel: 12px;
+
+  --animate-fade-in: fadeIn 0.25s ease;
+  --animate-pulse-dot: pulseDot 2s infinite;
+  --animate-spin: spin 0.8s linear infinite;
+}
+
+/* ── Light theme overrides ─────────────────────────────────────── */
+[data-theme="light"] {
+  --color-bg: #dfe6ef;
+  --color-surface: #eaf0f7;
+  --color-surface-2: #d4dde8;
+  --color-border: rgba(0,0,0,0.08);
+  --color-border-strong: rgba(0,0,0,0.18);
+
+  --color-cyan: #0284c7;
+  --color-cyan-dim: rgba(2,132,199,0.12);
+  --color-cyan-bg: rgba(2,132,199,0.07);
+
+  --color-amber: #b45309;
+  --color-amber-dim: rgba(180,83,9,0.12);
+  --color-amber-bg: rgba(180,83,9,0.07);
+
+  --color-green: #16a34a;
+  --color-green-dim: rgba(22,163,74,0.15);
+  --color-red: #dc2626;
+  --color-red-dim: rgba(220,38,38,0.15);
+
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-dim: #334155;
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Panel top glow ────────────────────────────────────────────── */
+.panel-glow-cyan::before,
+.panel-glow-amber::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 1;
+}
+.panel-glow-cyan::before  { background: linear-gradient(90deg, transparent, var(--color-cyan), transparent); }
+.panel-glow-amber::before { background: linear-gradient(90deg, transparent, var(--color-amber), transparent); }
+
+/* ── Header top glow ──────────────────────────────────────────── */
+.header-glow::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+
+/* ── Flight grid ───────────────────────────────────────────────── */
+.flight-grid {
+  display: grid;
+  grid-template-columns: 88px 52px 1fr 110px 88px;
+  align-items: center;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+.flight-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-2) transparent;
+}
+.flight-scroll::-webkit-scrollbar       { width: 3px; }
+.flight-scroll::-webkit-scrollbar-track { background: transparent; }
+.flight-scroll::-webkit-scrollbar-thumb { background: var(--color-surface-2); border-radius: 4px; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .flight-grid { grid-template-columns: 80px 46px 1fr 100px 82px; }
+}
+
+@media (max-width: 860px) {
+  .flight-grid { grid-template-columns: 74px 42px 1fr 90px 78px; }
+}
