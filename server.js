@@ -24,8 +24,11 @@ try {
 
 const PORT       = 3000;
 const LPPT       = { lat: 38.7756, lon: -9.1354 };
+// GNSS (WGS84) altitude of the LPPT runway: 374 ft elevation + ~150 ft geoid offset,
+// measured from aircraft parked on the ground. alt_geom minus this = height above the airport.
+const LPPT_GEOM_FT = 525;
 const RADIUS_NM  = 60;
-const POLL_MS    = 30_000;
+const POLL_MS    = 10_000;
 const SEEN_TTL_S = 20 * 60;
 
 const OPENSKY_CLIENT_ID     = process.env.OPENSKY_CLIENT_ID     ?? null;
@@ -98,17 +101,19 @@ async function lookupRouteByCallsign(callsign) {
       signal:  AbortSignal.timeout(6_000),
     });
 
-    if (res.status === 404) { callsignCache.set(key, null); return null; }
+    // 404 = unknown callsign, 400 = malformed — neither will change on retry
+    if (res.status === 404 || res.status === 400) { callsignCache.set(key, null); return null; }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
     const fr   = data?.response?.flightroute;
     if (!fr) { callsignCache.set(key, null); return null; }
 
-    const dep   = fr.origin?.icao_code      ?? null;
-    const arr   = fr.destination?.icao_code ?? null;
-    const route = (dep || arr)
-      ? { origin: dep, destination: arr, _cachedAt: Date.now() }
+    const dep     = fr.origin?.icao_code      ?? null;
+    const arr     = fr.destination?.icao_code ?? null;
+    const airline = fr.airline?.name          ?? null;
+    const route   = (dep || arr)
+      ? { origin: dep, destination: arr, airline, _cachedAt: Date.now() }
       : null;
 
     callsignCache.set(key, route);
@@ -180,15 +185,30 @@ function classifyAircraft(ac) {
   if (ac.alt_baro === "ground" || (alt !== null && alt < 100 && gs < 40)) return "ground";
   if (alt === null) return null;
 
-  const lowAlt = alt < 10_000;
-  if (lowAlt && rate < -150) return "arrival";
-  if (lowAlt && rate >  150) return "departure";
-  if (alt < 3_000)           return "arrival";
+  if (alt >= 10_000) return null;
+  if (rate < -150) return "arrival";
+  if (rate >  150) return "departure";
+  // Low but no clear climb/descent (e.g. just lifted off, or level on approach) — the caller decides
+  return "level";
+}
+
+// A known scheduled route is the most reliable signal for which board a flight belongs on
+function classifyByRoute(callsign) {
+  const route = callsign ? callsignCache.get(callsign) : null;
+  if (route?.origin      === "LPPT") return "departure";
+  if (route?.destination === "LPPT") return "arrival";
+  return null;
+}
+
+// Height above the airport in ft. alt_baro is pressure altitude (standard 1013 hPa, sea level),
+// which is off by hundreds of feet on high/low pressure days, so prefer GNSS altitude.
+function heightAboveAirport(ac) {
+  if (typeof ac.alt_geom === "number") return Math.max(0, Math.round(ac.alt_geom - LPPT_GEOM_FT));
   return null;
 }
 
 function getStatus(type, ac) {
-  const alt  = typeof ac.alt_baro === "number" ? ac.alt_baro : 0;
+  const alt  = heightAboveAirport(ac) ?? (typeof ac.alt_baro === "number" ? ac.alt_baro : 0);
   const rate = ac.baro_rate ?? 0;
 
   if (type === "arrival") {
@@ -233,24 +253,36 @@ async function pollAircraft() {
     const nowS = Math.floor(Date.now() / 1000);
     for (const ac of liveAircraft) {
       if (!ac.hex) continue;
-      const type = classifyAircraft(ac);
-      if (!type || type === "ground") continue;
+      // Skip light aircraft (A1) and rotorcraft (A7) — Cascais/training/medical traffic, not LPPT flights
+      if (ac.category === "A1" || ac.category === "A7") continue;
+      // Ignore placeholder callsigns (e.g. "@@@@@@@@" from transponders with none set)
+      const raw = ac.flight?.trim().toUpperCase();
+      const cs  = raw && /^[A-Z0-9]+$/.test(raw) ? raw : null;
+
+      // Look up scheduled routes from the ground too, so departures are known by takeoff
+      if (cs && !callsignCache.has(cs)) {
+        lookupRouteByCallsign(cs).catch(() => {});
+      }
+
+      const phase = classifyAircraft(ac);
+      if (!phase || phase === "ground") continue;
+
+      // Route wins; otherwise climb/descent; a level plane keeps whatever it was last classified as
+      const prevType = seenAircraft.get(ac.hex)?._type ?? null;
+      const type     = classifyByRoute(cs) ?? (phase === "level" ? prevType : phase);
+      if (!type) continue;
 
       seenAircraft.set(ac.hex, {
         ...ac,
         _type:     type,
         _status:   getStatus(type, ac),
-        _callsign: ac.flight?.trim() ?? null,
+        _callsign: cs,
         _seenAt:   nowS,
       });
 
-      // Kick off route lookups (non-blocking)
+      // Kick off OpenSky route lookup (non-blocking; airborne only to save API quota)
       if (!routeCache.has(ac.hex.toLowerCase())) {
         lookupRoute(ac.hex).catch(() => {});
-      }
-      const cs = ac.flight?.trim().toUpperCase();
-      if (cs && !callsignCache.has(cs)) {
-        lookupRouteByCallsign(cs).catch(() => {});
       }
     }
 
@@ -295,8 +327,9 @@ function buildResponse() {
     const hexOk = validate(hexRoute);
     const csOk  = validate(csRoute);
 
-    // Pick the best source: prefer validated, fall back to OpenSky, then callsign
-    const best = (hexOk ? hexRoute : null) ?? (csOk ? csRoute : null) ?? hexRoute ?? csRoute ?? null;
+    // Prefer the scheduled (callsign) route — OpenSky's is often the aircraft's previous leg.
+    // Never show a route that contradicts the board (e.g. an arrival "from Lisbon").
+    const best = (csOk ? csRoute : null) ?? (hexOk ? hexRoute : null);
 
     const origin = best?.origin ?? null;
     const dest   = best?.destination ?? null;
@@ -305,11 +338,12 @@ function buildResponse() {
     return {
       hex:             ac.hex,
       callsign:        ac._callsign,
+      airline:         csRoute?.airline ?? null,
       registration:    ac.r  ?? null,
       aircraftType:    ac.t  ?? null,
       origin:          isArrival  ? origin : null,
       destination:     !isArrival ? dest   : null,
-      altitude:        typeof ac.alt_baro === "number" ? Math.round(ac.alt_baro) : null,
+      altitude:        heightAboveAirport(ac),
       speed:           ac.gs        ? Math.round(ac.gs)        : null,
       heading,
       headingCardinal: headingToCardinal(heading),

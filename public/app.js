@@ -1,4 +1,4 @@
-const REFRESH_MS = 30_000;
+const REFRESH_MS = 10_000;
 
 // ICAO aircraft type → friendly name
 const AIRCRAFT_TYPES = {
@@ -36,20 +36,16 @@ function getAirlineName(callsign) {
   return null;
 }
 
+// No known airline: an airline-style callsign (3 letters + digit) shows its code,
+// anything else (usually the registration, e.g. "OKVPG") is a private flight
+function fallbackOperator(callsign) {
+  const cs = callsign?.trim().toUpperCase() ?? "";
+  return /^[A-Z]{3}\d/.test(cs) ? cs.slice(0, 3) : "Private";
+}
+
 function formatCallsign(callsign) {
   if (!callsign) return "—";
   return callsign.trim().replace(/^([A-Z]{2,4})(\d.*)$/, "$1 $2");
-}
-
-function formatAltitude(ft) {
-  if (ft === null || ft === undefined) return null;
-  if (ft < 1000) return `${ft} ft`;
-  return `${(ft / 1000).toFixed(1)}k ft`;
-}
-
-function formatSpeed(kts) {
-  if (!kts) return null;
-  return `${kts} kts`;
 }
 
 function timeAgo(unixSeconds) {
@@ -96,57 +92,54 @@ function buildBoard(flights) {
 
 // ── Render ────────────────────────────────────────────────────────
 
-function createEmptyRow(slotClass) {
+function createEmptyRow(slotClass, note = null) {
   const row = document.createElement("div");
   row.className = `flight-row ${slotClass} slot-empty`;
-  row.innerHTML = `<div></div><div></div><div></div><div></div><div></div>`;
+  row.innerHTML = note
+    ? `<div class="slot-empty-note">${note}</div>`
+    : `<div class="slot-empty-dash">—</div><div></div><div></div><div></div>`;
   return row;
 }
 
 function createFlightRow(flight, type, slotClass) {
   const isArrival   = type === "arrival";
-  const airlineName = getAirlineName(flight.callsign);
+  // Curated short names first (e.g. "easyJet"), then whatever adsbdb knows
+  const airlineName = getAirlineName(flight.callsign) ?? flight.airline;
   const acType      = flight.aircraftType
     ? (AIRCRAFT_TYPES[flight.aircraftType.toUpperCase()] ?? flight.aircraftType)
     : null;
 
-  // Status badge
-  const statusLower = (flight.status ?? "").toLowerCase();
-  let statusClass = "status-airborne";
-  if (statusLower.includes("final") || statusLower.includes("taking")) statusClass = "status-approaching";
-  else if (isArrival) statusClass = "status-landed";
-  else                statusClass = "status-departed";
-  if (flight.isLive)  statusClass = "status-approaching";
+  // Status badge — live flights show their in-flight status; once out of sight they've landed / departed
+  let statusClass, statusText;
+  if (flight.isLive) {
+    statusClass = "status-approaching";
+    statusText  = flight.status ?? "—";
+  } else {
+    statusClass = isArrival ? "status-landed" : "status-departed";
+    statusText  = isArrival ? "Landed" : "Departed";
+  }
 
-  // Detail tags
-  const detailParts = [];
-  if (flight.altitude !== null) detailParts.push(formatAltitude(flight.altitude));
-  if (flight.speed    !== null) detailParts.push(formatSpeed(flight.speed));
-  if (acType)                   detailParts.push(acType);
-
-  // ICAO column + City column
+  // City column (ICAO code goes in the subline next to the country)
   const routeIcao   = isArrival ? flight.origin : flight.destination;
   const airportInfo = routeIcao ? (AIRPORTS[routeIcao] ?? null) : null;
 
-  let icaoHtml, cityHtml;
+  let cityHtml;
   if (routeIcao) {
-    icaoHtml = `<div class="route-icao">${routeIcao}</div>`;
-    const city    = airportInfo?.city    ?? routeIcao;
-    const flag    = airportInfo?.flag    ?? "";
-    const country = airportInfo?.country ?? "";
+    const city    = airportInfo?.city ?? routeIcao;
+    const flag    = airportInfo?.flag ?? "";
+    const subline = airportInfo ? `${airportInfo.country} · ${routeIcao}` : "";
     cityHtml = `
       <div class="city-name">
         ${flag ? `<span class="city-flag">${flag}</span>` : ""}
         <span class="city-text">${city}</span>
       </div>
-      <div class="city-country">${country}</div>`;
+      <div class="city-country">${subline}</div>`;
   } else {
     // Heading fallback while route resolves
     const card = flight.headingCardinal ?? "—";
     const deg  = flight.heading;
-    icaoHtml = `<div class="route-icao route-icao--dim">${headingArrow(deg)}</div>`;
-    cityHtml = `<div class="city-name city-name--dim"><span class="city-text">${card}${deg != null ? ` · ${deg}°` : ""}</span></div>
-                <div class="city-country">${airlineName ?? "—"}</div>`;
+    cityHtml = `<div class="city-name city-name--dim">${headingArrow(deg)}<span class="city-text">${card}${deg != null ? ` · ${deg}°` : ""}</span></div>
+                <div class="city-country">Route unknown</div>`;
   }
 
   const row = document.createElement("div");
@@ -154,22 +147,20 @@ function createFlightRow(flight, type, slotClass) {
 
   row.innerHTML = `
     <div>
+      <div class="flight-airline">${airlineName ?? fallbackOperator(flight.callsign)}</div>
       <div class="flight-callsign">${flight.callsign ? formatCallsign(flight.callsign) : "—"}</div>
-      <div class="flight-airline">${airlineName ?? (flight.registration ?? "—")}</div>
     </div>
-    <div class="col-icao">${icaoHtml}</div>
     <div class="col-city">${cityHtml}</div>
     <div>
-      <div class="flight-detail-row">
-        ${detailParts.map(p => `<span class="flight-detail-tag">${p}</span>`).join("")}
-      </div>
+      <div class="aircraft-model">${acType ?? "—"}</div>
+      <div class="aircraft-reg">${flight.registration ?? ""}</div>
     </div>
     <div>
       <div class="flight-status ${statusClass}">
         <span class="status-dot-sm"></span>
-        ${flight.status ?? "—"}
+        ${statusText}
       </div>
-      <div class="flight-time-ago">${timeAgo(flight.seenAt)}</div>
+      ${flight.isLive ? "" : `<div class="flight-time-ago">${timeAgo(flight.seenAt)}</div>`}
     </div>
   `;
 
@@ -177,23 +168,31 @@ function createFlightRow(flight, type, slotClass) {
 }
 
 function renderList(listEl, countEl, flights, type) {
-  listEl.innerHTML = "";
-
   const slotClasses = ["slot-past", "slot-past", "slot-current", "slot-upcoming", "slot-upcoming"];
-  const board = buildBoard(flights);
+  const board   = buildBoard(flights);
+  const isEmpty = board.every(s => s === null);
 
-  if (board.every(s => s === null)) {
-    listEl.innerHTML = `<div class="empty-state"><span>No aircraft tracked nearby</span></div>`;
-    countEl.textContent = "0";
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
+  // Always render all 5 slots so the board keeps its shape; when empty, the note goes in the NOW slot.
+  // Rows are patched in place so refreshes don't flicker — only a different flight taking a slot fades in.
   board.forEach((flight, i) => {
-    const cls = slotClasses[i];
-    frag.appendChild(flight ? createFlightRow(flight, type, cls) : createEmptyRow(cls));
+    const cls  = slotClasses[i];
+    const note = isEmpty && i === 2 ? "No aircraft tracked nearby" : null;
+    const row  = flight ? createFlightRow(flight, type, cls) : createEmptyRow(cls, note);
+    row.dataset.key = flight?.hex ?? "empty";
+
+    const old = listEl.children[i];
+    if (old?.dataset.key === row.dataset.key) {
+      if (old.className !== row.className) old.className = row.className;
+      if (old.innerHTML !== row.innerHTML) old.innerHTML = row.innerHTML;
+      return;
+    }
+    if (flight) row.classList.add("is-new");
+    if (old) old.replaceWith(row);
+    else     listEl.appendChild(row);
   });
-  listEl.appendChild(frag);
+
+  // Drop anything beyond the 5 slots (e.g. the initial loading state)
+  while (listEl.children.length > board.length) listEl.lastElementChild.remove();
   countEl.textContent = `${flights.length}`;
 }
 

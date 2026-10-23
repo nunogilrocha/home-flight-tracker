@@ -8,7 +8,7 @@ A real-time arrivals & departures dashboard for **Lisbon Humberto Delgado Airpor
 
 ## Features
 
-- **Live flight positions** — polls [adsb.lol](https://adsb.lol) every 30 seconds (free, no rate limits)
+- **Live flight positions** — polls [adsb.lol](https://adsb.lol) every 10 seconds (free, no rate limits)
 - **Route lookup** — origin/destination resolved via OpenSky Network and adsbdb
 - **Smart route validation** — cross-references sources and discards routes that don't match Lisbon
 - **5-slot departure board** — past · past · **NOW** · upcoming · upcoming
@@ -74,7 +74,7 @@ All config is at the top of `server.js`:
 |----------|---------|-------------|
 | `PORT` | `3000` | HTTP server port |
 | `RADIUS_NM` | `60` | Tracking radius in nautical miles |
-| `POLL_MS` | `30000` | ADS-B poll interval |
+| `POLL_MS` | `10000` | ADS-B poll interval |
 | `SEEN_TTL_S` | `1200` | How long to keep aircraft after last seen (20 min) |
 
 ---

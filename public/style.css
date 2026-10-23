@@ -30,8 +30,12 @@
 
   --radius:       12px;
 
-  /* 5-column grid: callsign | icao | city (flex) | details | status */
-  --grid: 88px 52px 1fr 110px 88px;
+  /* Board base size scales with the panel width (10px on a ~570px tablet panel,
+     ~16px on a 1080p TV); everything inside the board is sized in em off this */
+  --board-font: clamp(8px, calc(100cqi / 57), 20px);
+
+  /* 4-column grid: airline + flight | city (flex) | details | status */
+  --grid: 11em 1fr 9em 10.8em;
 }
 
 [data-theme="light"] {
@@ -160,6 +164,7 @@ html, body {
   border-radius: var(--radius);
   overflow: hidden;
   position: relative;
+  container-type: inline-size;
 }
 
 .panel--arrivals::before,
@@ -178,16 +183,22 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px 12px;
+  padding: 1.4em 1.8em 1.2em;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.panel-header,
+.flight-table {
+  font-size: 10px;               /* fallback without container query units */
+  font-size: var(--board-font);
 }
 
 .panel-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 0.6em;
+  font-size: 1.3em;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -195,16 +206,16 @@ html, body {
 .panel--arrivals   .panel-title { color: var(--cyan); }
 .panel--departures .panel-title { color: var(--amber); }
 
-.panel-icon { width: 16px; height: 16px; }
+.panel-icon { width: 1.2em; height: 1.2em; }
 
 .panel-count {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 1.1em;
   color: var(--text-muted);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 2px 8px;
+  padding: 0.2em 0.7em;
 }
 
 /* ── Table ──────────────────────────────────────────────────────── */
@@ -218,8 +229,8 @@ html, body {
 .flight-table-head {
   display: grid;
   grid-template-columns: var(--grid);
-  padding: 7px 18px;
-  font-size: 10px;
+  column-gap: 1em;
+  padding: 0.7em 1.8em;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -228,33 +239,38 @@ html, body {
   flex-shrink: 0;
 }
 
+/* 5 slots share the panel height in fixed proportions, so both panels line up
+   regardless of how many flights each has */
 .flight-list {
-  overflow-y: auto;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1.4fr 1fr 1fr;
   flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: var(--surface-2) transparent;
+  min-height: 0;
+  overflow: hidden;
 }
-.flight-list::-webkit-scrollbar       { width: 3px; }
-.flight-list::-webkit-scrollbar-track { background: transparent; }
-.flight-list::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 4px; }
+.flight-list > .loading-state,
+.flight-list > .error-state { grid-row: 1 / -1; }
 
 /* ── Flight Row (base) ──────────────────────────────────────────── */
 .flight-row {
   display: grid;
   grid-template-columns: var(--grid);
+  column-gap: 1em;
   align-items: center;
-  padding: 9px 18px;
+  padding: 0.9em 1.8em;
   border-bottom: 1px solid var(--border);
   transition: background 0.15s, opacity 0.2s;
-  animation: fadeIn 0.25s ease;
-  min-height: 44px;
+  min-height: 0;
+  overflow: hidden;
 }
 .flight-row:last-child { border-bottom: none; }
 .flight-row:hover      { background: var(--surface-2); }
 
+/* Only when a different flight takes the slot — routine refreshes patch rows silently */
+.flight-row.is-new { animation: fadeIn 0.6s ease; }
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
 }
 
 /* ── Slot styles ────────────────────────────────────────────────── */
@@ -263,84 +279,85 @@ html, body {
 .flight-row.slot-past {
   opacity: 0.4;
 }
-.flight-row.slot-past .city-text { font-size: 14px; }
+.flight-row.slot-past .city-text { font-size: 1.4em; }
 
 /* Current slot (3): highlighted */
 .flight-row.slot-current {
-  min-height: 58px;
   border-top: 1px solid var(--border-strong);
   border-bottom: 1px solid var(--border-strong);
   position: relative;
   z-index: 1;
 }
-.panel--arrivals   .flight-row.slot-current { background: var(--cyan-bg);  border-left: 3px solid var(--cyan);  padding-left: 15px; }
-.panel--departures .flight-row.slot-current { background: var(--amber-bg); border-left: 3px solid var(--amber); padding-left: 15px; }
-.flight-row.slot-current .city-text  { font-size: 22px; font-weight: 600; }
-.flight-row.slot-current .city-flag  { font-size: 18px; }
-.flight-row.slot-current .city-country { font-size: 11px; }
-.flight-row.slot-current .flight-callsign { font-size: 14px; }
-.flight-row.slot-current .flight-detail-tag { font-size: 11px; padding: 2px 7px; }
+.panel--arrivals   .flight-row.slot-current { background: var(--cyan-bg);  border-left: 3px solid var(--cyan);  padding-left: calc(1.8em - 3px); }
+.panel--departures .flight-row.slot-current { background: var(--amber-bg); border-left: 3px solid var(--amber); padding-left: calc(1.8em - 3px); }
+.flight-row.slot-current .city-text  { font-size: 2.2em; font-weight: 600; }
+.flight-row.slot-current .city-flag  { font-size: 1.8em; }
+.flight-row.slot-current .city-country { font-size: 1.1em; }
+.flight-row.slot-current .flight-airline  { font-size: 1.8em; }
+.flight-row.slot-current .flight-callsign { font-size: 1.2em; }
+.flight-row.slot-current .aircraft-model { font-size: 1.6em; }
+.flight-row.slot-current .aircraft-reg   { font-size: 1.2em; }
 
 /* Upcoming slots (4–5): slight fade */
 .flight-row.slot-upcoming {
   opacity: 0.7;
 }
-.flight-row.slot-upcoming .city-text { font-size: 16px; }
+.flight-row.slot-upcoming .city-text { font-size: 1.6em; }
 
-/* Empty slot: ghost row */
-.flight-row.slot-empty {
-  opacity: 0.12;
-  pointer-events: none;
-  min-height: 36px;
+/* Empty slot: keeps its row and divider, shows a faint placeholder */
+.flight-row.slot-empty { pointer-events: none; }
+
+.slot-empty-dash {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.slot-empty-note {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.3em;
+  color: var(--text-muted);
 }
 
 /* ── Flight number & airline ────────────────────────────────────── */
 .flight-callsign {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 1.1em;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-dim);
   letter-spacing: 0.05em;
+  margin-top: 0.3em;
 }
 
+/* Airline is the primary line; wraps to a second line rather than truncating longer names */
 .flight-airline {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  white-space: nowrap;
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--text);
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
-
-/* ── ICAO column ────────────────────────────────────────────────── */
-.col-icao { display: flex; flex-direction: column; justify-content: center; }
-
-.route-icao {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-}
-
-.route-icao--dim { color: var(--text-muted); opacity: 0.7; font-size: 14px; }
 
 .heading-arrow { line-height: 1; color: var(--text-muted); }
 
 /* ── City column (hero) ─────────────────────────────────────────── */
-.col-city { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.col-city { display: flex; flex-direction: column; justify-content: center; overflow: hidden; min-width: 0; }
 
 .city-name {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 0.6em;
   overflow: hidden;
 }
 
-.city-flag { font-size: 13px; flex-shrink: 0; line-height: 1; }
+.city-flag { font-size: 1.3em; flex-shrink: 0; line-height: 1; }
 
 .city-text {
-  font-size: 17px;           /* base; overridden per slot */
+  font-size: 1.7em;          /* base; overridden per slot */
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.01em;
@@ -350,35 +367,39 @@ html, body {
   transition: font-size 0.2s;
 }
 
-.city-name--dim .city-text { color: var(--text-dim); font-weight: 500; font-size: 14px; }
+.city-name--dim .city-text { color: var(--text-dim); font-weight: 500; font-size: 1.4em; }
 
 .city-country {
-  font-size: 10px;
+  font-size: 1em;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 0.2em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ── Detail tags ────────────────────────────────────────────────── */
-.flight-detail-row { display: flex; flex-wrap: wrap; gap: 3px; }
-
-.flight-detail-tag {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
+/* ── Aircraft (model + registration) ────────────────────────────── */
+.aircraft-model {
+  font-size: 1.4em;
+  font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aircraft-reg {
+  font-family: var(--font-mono);
+  font-size: 1.1em;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  margin-top: 0.3em;
 }
 
 .flight-time-ago {
-  font-size: 9px;
+  font-size: 0.9em;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 0.3em;
   white-space: nowrap;
 }
 
@@ -386,17 +407,17 @@ html, body {
 .flight-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  gap: 0.5em;
+  font-size: 1em;
   font-weight: 500;
   letter-spacing: 0.04em;
-  padding: 3px 8px;
+  padding: 0.3em 0.8em;
   border-radius: 20px;
   white-space: nowrap;
   width: fit-content;
 }
 
-.status-dot-sm { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.status-dot-sm { width: 0.5em; height: 0.5em; border-radius: 50%; flex-shrink: 0; }
 
 .flight-status.status-landed    { background: var(--green-dim); color: var(--green); }
 .flight-status.status-landed    .status-dot-sm { background: var(--green); }
@@ -405,17 +426,19 @@ html, body {
 .flight-status.status-departed  .status-dot-sm { background: var(--amber); }
 
 .flight-status.status-approaching { background: var(--cyan-dim); color: var(--cyan); }
-.flight-status.status-approaching .status-dot-sm { background: var(--cyan); animation: pulse 1s infinite; }
+.flight-status.status-approaching .status-dot-sm { background: var(--cyan); }
+/* Only the NOW flight pulses, slowly */
+.slot-current .flight-status.status-approaching .status-dot-sm { animation: pulse 2s infinite; }
 
 .flight-status.status-airborne  { background: rgba(148,163,184,0.1); color: var(--text-dim); }
 .flight-status.status-airborne  .status-dot-sm { background: var(--text-muted); }
 
-/* Departures current slot — amber pulse */
-.panel--departures .flight-row.slot-current .flight-status.status-approaching {
+/* Live departures — amber pulse instead of the arrivals cyan */
+.panel--departures .flight-status.status-approaching {
   background: var(--amber-dim);
   color: var(--amber);
 }
-.panel--departures .flight-row.slot-current .flight-status.status-approaching .status-dot-sm {
+.panel--departures .flight-status.status-approaching .status-dot-sm {
   background: var(--amber);
 }
 
@@ -425,7 +448,7 @@ html, body {
 }
 
 /* ── Empty / Loading ────────────────────────────────────────────── */
-.loading-state, .empty-state, .error-state {
+.loading-state, .error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -451,16 +474,13 @@ html, body {
 
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  :root { --grid: 80px 46px 1fr 100px 82px; }
   .airport-iata { font-size: 22px; }
   .clock        { font-size: 20px; }
 }
 
 @media (max-width: 860px) {
-  :root { --grid: 74px 42px 1fr 90px 78px; }
   .app { grid-template-rows: 60px 1fr; padding: 8px; gap: 8px; }
   .panels { gap: 8px; }
-  .flight-row.slot-current .city-text { font-size: 17px; }
 }
 
 @media (max-width: 680px) {
