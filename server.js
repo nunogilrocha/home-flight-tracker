@@ -265,7 +265,21 @@ async function pollAircraft() {
       }
 
       const phase = classifyAircraft(ac);
-      if (!phase || phase === "ground") continue;
+      if (!phase) continue;
+
+      // On the ground, only a scheduled departure from Lisbon is kept — it's next in the departure queue
+      if (phase === "ground") {
+        if (classifyByRoute(cs) !== "departure") continue;
+        seenAircraft.set(ac.hex, {
+          ...ac,
+          _type:     "departure",
+          _status:   (ac.gs ?? 0) >= 3 ? "Taxiing" : "At Gate",
+          _onGround: true,
+          _callsign: cs,
+          _seenAt:   nowS,
+        });
+        continue;
+      }
 
       // Route wins; otherwise climb/descent; a level plane keeps whatever it was last classified as
       const prevType = seenAircraft.get(ac.hex)?._type ?? null;
@@ -276,6 +290,7 @@ async function pollAircraft() {
         ...ac,
         _type:     type,
         _status:   getStatus(type, ac),
+        _onGround: false,
         _callsign: cs,
         _seenAt:   nowS,
       });
@@ -349,6 +364,7 @@ function buildResponse() {
       headingCardinal: headingToCardinal(heading),
       verticalRate:    ac.baro_rate  ? Math.round(ac.baro_rate) : null,
       status:          ac._status,
+      onGround:        ac._onGround,
       seenAt:          ac._seenAt,
       isLive:          (nowS - ac._seenAt) < 90,
       hasRoute:        !!(hexRoute || csRoute),

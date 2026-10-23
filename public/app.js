@@ -67,27 +67,29 @@ function headingArrow(deg) {
 // Returns exactly 5 slots: [past, past, CURRENT, upcoming, upcoming]
 // Nulls = empty slot
 
-function buildBoard(flights) {
-  const live = flights.filter(f => f.isLive);
-  const past = flights.filter(f => !f.isLive);
+function buildBoard(flights, type) {
+  const airborne = flights.filter(f => f.isLive && !f.onGround);
+  const ground   = flights.filter(f => f.isLive && f.onGround);
+  // Out of sight — but a plane last seen on the ground (e.g. transponder off at the gate) hasn't departed
+  const gone     = flights.filter(f => !f.isLive && !f.onGround);
 
-  // Sort live by altitude ascending: lowest = most imminent (final approach / just took off)
-  live.sort((a, b) => (a.altitude ?? 99999) - (b.altitude ?? 99999));
+  // Lowest first: arrivals in landing order, departures in reverse takeoff order
+  airborne.sort((a, b) => (a.altitude ?? 99999) - (b.altitude ?? 99999));
+  gone.sort((a, b) => a.seenAt - b.seenAt);
 
-  // Sort past by seenAt descending: most recently seen first
-  past.sort((a, b) => b.seenAt - a.seenAt);
+  // Every flight in time order, oldest first; `now` is the index of the NOW slot
+  let sequence, now;
+  if (type === "arrival") {
+    sequence = [...gone, ...airborne];
+    now      = gone.length;
+  } else {
+    // Higher departures took off earlier; planes on the ground are next, moving ones first
+    ground.sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
+    sequence = [...gone, ...airborne.reverse(), ...ground];
+    now      = gone.length + Math.max(airborne.length - 1, 0);
+  }
 
-  const current  = live[0]        ?? null;
-  const upcoming = live.slice(1, 3);                  // next 2 by altitude
-  const recent   = past.slice(0, 2).reverse();        // 2 most recent, oldest first
-
-  return [
-    recent[0]   ?? null,   // slot 1 — older past
-    recent[1]   ?? null,   // slot 2 — more recent past
-    current,               // slot 3 — NOW (highlighted)
-    upcoming[0] ?? null,   // slot 4 — next in queue
-    upcoming[1] ?? null,   // slot 5 — after that
-  ];
+  return [-2, -1, 0, 1, 2].map(offset => sequence[now + offset] ?? null);
 }
 
 // ── Render ────────────────────────────────────────────────────────
@@ -169,7 +171,7 @@ function createFlightRow(flight, type, slotClass) {
 
 function renderList(listEl, countEl, flights, type) {
   const slotClasses = ["slot-past", "slot-past", "slot-current", "slot-upcoming", "slot-upcoming"];
-  const board   = buildBoard(flights);
+  const board   = buildBoard(flights, type);
   const isEmpty = board.every(s => s === null);
 
   // Always render all 5 slots so the board keeps its shape; when empty, the note goes in the NOW slot.
