@@ -224,6 +224,29 @@ function getStatus(type, ac) {
   return "—";
 }
 
+// Main runway 02/20 thresholds (OurAirports). 17/35 is mostly used as a taxiway, so it's ignored.
+const RUNWAY = { a: { lat: 38.765678, lon: -9.144302 }, b: { lat: 38.797313, lon: -9.127376 } };
+
+// Distance in metres from a position to the runway centreline (flat-earth is fine at airport scale)
+function distanceToRunway(lat, lon) {
+  const mLat = 111_195;
+  const mLon = 111_195 * Math.cos(RUNWAY.a.lat * Math.PI / 180);
+  const bx = (RUNWAY.b.lon - RUNWAY.a.lon) * mLon, by = (RUNWAY.b.lat - RUNWAY.a.lat) * mLat;
+  const px = (lon - RUNWAY.a.lon) * mLon,          py = (lat - RUNWAY.a.lat) * mLat;
+  const t  = Math.max(0, Math.min(1, (px * bx + py * by) / (bx * bx + by * by)));
+  return Math.hypot(px - t * bx, py - t * by);
+}
+
+// Status of a departure still on the ground, plus its place in the queue (lower = leaves sooner)
+function getGroundStatus(ac) {
+  const dist = typeof ac.lat === "number" ? Math.round(distanceToRunway(ac.lat, ac.lon)) : 9_999;
+  // Holding points sit ~100 m from the centreline; anything this close is about to line up
+  if (dist < 150)        return { status: "At Runway", queue: dist };
+  // Pushback and slow taxiing run at 1–3 kt; a parked plane reads under 1 kt
+  if ((ac.gs ?? 0) >= 1) return { status: "Taxiing",   queue: 10_000 + dist };
+  return                        { status: "At Gate",   queue: 20_000 + dist };
+}
+
 function headingToCardinal(deg) {
   if (deg == null) return null;
   const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
@@ -270,10 +293,12 @@ async function pollAircraft() {
       // On the ground, only a scheduled departure from Lisbon is kept — it's next in the departure queue
       if (phase === "ground") {
         if (classifyByRoute(cs) !== "departure") continue;
+        const { status, queue } = getGroundStatus(ac);
         seenAircraft.set(ac.hex, {
           ...ac,
           _type:     "departure",
-          _status:   (ac.gs ?? 0) >= 3 ? "Taxiing" : "At Gate",
+          _status:   status,
+          _queue:    queue,
           _onGround: true,
           _callsign: cs,
           _seenAt:   nowS,
@@ -365,6 +390,7 @@ function buildResponse() {
       verticalRate:    ac.baro_rate  ? Math.round(ac.baro_rate) : null,
       status:          ac._status,
       onGround:        ac._onGround,
+      groundQueue:     ac._queue ?? null,
       seenAt:          ac._seenAt,
       isLive:          (nowS - ac._seenAt) < 90,
       hasRoute:        !!(hexRoute || csRoute),

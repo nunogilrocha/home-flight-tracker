@@ -83,8 +83,8 @@ function buildBoard(flights, type) {
     sequence = [...gone, ...airborne];
     now      = gone.length;
   } else {
-    // Higher departures took off earlier; planes on the ground are next, moving ones first
-    ground.sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
+    // Higher departures took off earlier; planes on the ground are next — at the runway, then taxiing, then at the gate
+    ground.sort((a, b) => a.groundQueue - b.groundQueue);
     sequence = [...gone, ...airborne.reverse(), ...ground];
     now      = gone.length + Math.max(airborne.length - 1, 0);
   }
