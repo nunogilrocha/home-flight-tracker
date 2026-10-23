@@ -1,0 +1,14 @@
+[Unit]
+Description=Home Flight Tracker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/home/ngr/dev/home-flight-tracker
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+User=ngr
+
+[Install]
+WantedBy=multi-user.target
