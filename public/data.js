@@ -29,6 +29,7 @@ const AIRPORTS = {
   LEVX: { city: "Vigo",           country: "Spain",        flag: "🇪🇸" },
   LECO: { city: "A Coruña",       country: "Spain",        flag: "🇪🇸" },
   LEBB: { city: "Bilbao",         country: "Spain",        flag: "🇪🇸" },
+  LEAS: { city: "Asturias",       country: "Spain",        flag: "🇪🇸" },
   LEAM: { city: "Almería",        country: "Spain",        flag: "🇪🇸" },
   LEAL: { city: "Alicante",       country: "Spain",        flag: "🇪🇸" },
   LXGB: { city: "Gibraltar",      country: "Gibraltar",    flag: "🇬🇮" },
@@ -183,6 +184,7 @@ const AIRPORTS = {
   OERK: { city: "Riyadh",         country: "Saudi Arabia", flag: "🇸🇦" },
   HECA: { city: "Cairo",          country: "Egypt",        flag: "🇪🇬" },
   HESH: { city: "Sharm el-Sheikh", country: "Egypt",       flag: "🇪🇬" },
+  RKSI: { city: "Seoul",          country: "South Korea",  flag: "🇰🇷" },
 
   // Eastern Europe
   LCLK: { city: "Larnaca",        country: "Cyprus",       flag: "🇨🇾" },
@@ -274,6 +276,7 @@ const AIRLINES = {
   SIA: "Singapore Airlines",
   JAL: "Japan Airlines",
   ANA: "ANA",
+  KAL: "Korean Air",
   AMX: "Aeroméxico",
   SKW: "SkyWest",
   GEC: "Lufthansa Cargo",
