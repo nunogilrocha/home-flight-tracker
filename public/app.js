@@ -231,8 +231,10 @@ async function fetchAndRender() {
 
     const now = new Date();
     lastUpdatedEl.textContent = `${meta?.aircraft ?? "?"} tracked · ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-    statusDot.className    = "status-dot live";
-    statusText.textContent = "Live";
+    // The server still answers when the flight feed is down — it just serves its last data
+    const stale = !meta?.lastPollAt || Date.now() - meta.lastPollAt > 60_000;
+    statusDot.className    = stale ? "status-dot" : "status-dot live";
+    statusText.textContent = stale ? "Delayed" : "Live";
     lastFetchOk = true;
   } catch (err) {
     console.error("Fetch failed:", err);

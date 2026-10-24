@@ -261,16 +261,42 @@ const seenAircraft = new Map(); // hex → enriched object
 
 // ── Poll adsb.lol ─────────────────────────────────────────────────
 
+// Same readsb-style data from both; adsb.lol allows only 500 requests/day, so it's the backup
+const ADSB_SOURCES = [
+  { name: "adsb.fi",  url: `https://opendata.adsb.fi/api/v2/lat/${LPPT.lat}/lon/${LPPT.lon}/dist/${RADIUS_NM}`, blockedUntil: 0 },
+  { name: "adsb.lol", url: `https://api.adsb.lol/v2/lat/${LPPT.lat}/lon/${LPPT.lon}/dist/${RADIUS_NM}`,         blockedUntil: 0 },
+];
+
+// First source that answers; a rate-limited source is skipped until its limit resets
+async function fetchAircraft() {
+  const errors = [];
+  for (const src of ADSB_SOURCES) {
+    if (Date.now() < src.blockedUntil) continue;
+    try {
+      const res = await fetch(src.url, {
+        headers: { "User-Agent": "home-flight-tracker/1.0" },
+        signal:  AbortSignal.timeout(10_000),
+      });
+      if (res.status === 429) {
+        const waitS = Number(res.headers.get("retry-after") ?? res.headers.get("x-ratelimit-reset")) || 60;
+        src.blockedUntil = Date.now() + waitS * 1000;
+        console.warn(`[${src.name}] rate limited — skipping for ${Math.round(waitS / 60)} min`);
+        errors.push(`${src.name}: HTTP 429`);
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.ac ?? data.aircraft ?? [];
+    } catch (err) {
+      errors.push(`${src.name}: ${err.message}`);
+    }
+  }
+  throw new Error(errors.join("; ") || "all sources rate limited");
+}
+
 async function pollAircraft() {
-  const url = `https://api.adsb.lol/v2/lat/${LPPT.lat}/lon/${LPPT.lon}/dist/${RADIUS_NM}`;
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "home-flight-tracker/1.0" },
-      signal:  AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    liveAircraft = data.ac ?? [];
+    liveAircraft = await fetchAircraft();
     lastPollAt   = Date.now();
 
     const nowS = Math.floor(Date.now() / 1000);
@@ -349,7 +375,8 @@ async function pollAircraft() {
 
 function buildResponse() {
   const all  = [...seenAircraft.values()];
-  const nowS = Math.floor(Date.now() / 1000);
+  // Measured from the last successful poll, so a feed outage freezes the board instead of emptying it
+  const nowS = Math.floor((lastPollAt ?? Date.now()) / 1000);
 
   const toEntry = (ac) => {
     const hexRoute  = routeCache.get(ac.hex.toLowerCase()) ?? null;
