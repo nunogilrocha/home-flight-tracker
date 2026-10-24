@@ -39,31 +39,31 @@
   --grid: 11em 1fr 9em 10.8em;
 }
 
-/* Light: Lisbon by day — limestone panels (mid-light, so the TV doesn't glare), azulejo cobalt
-   for arrivals, tram yellow for departures with ochre text on it, ink-blue type */
+/* Light: Lisbon by day — stone-grey panels framed by roof-tile terracotta, azulejo cobalt
+   for arrivals, tram yellow for departures with ochre text on it, ink-blue type. Mid-light so the TV doesn't glare. */
 [data-theme="light"] {
-  --bg:           #c5cac4;
-  --surface:      #dde0db;
-  --surface-2:    #d1d5cf;
-  --border:       rgba(28,38,51,0.10);
-  --border-strong:rgba(28,38,51,0.20);
+  --bg:           #935031;
+  --surface:      #c5cac4;
+  --surface-2:    #b9beb7;
+  --border:       rgba(26,35,48,0.12);
+  --border-strong:rgba(26,35,48,0.22);
 
-  --cyan:         #1d4f91;
-  --cyan-dim:     rgba(29,79,145,0.14);
-  --cyan-bg:      rgba(29,79,145,0.09);
+  --cyan:         #17427a;
+  --cyan-dim:     rgba(23,66,122,0.15);
+  --cyan-bg:      rgba(23,66,122,0.09);
 
-  --amber:        #774a00;
-  --amber-dim:    rgba(224,168,28,0.32);
-  --amber-bg:     rgba(224,168,28,0.18);
+  --amber:        #6a4100;
+  --amber-dim:    rgba(232,176,33,0.40);
+  --amber-bg:     rgba(232,176,33,0.22);
 
-  --green:        #255a2f;
-  --green-dim:    rgba(46,106,57,0.14);
-  --red:          #8f2525;
-  --red-dim:      rgba(143,37,37,0.13);
+  --green:        #1f4f28;
+  --green-dim:    rgba(46,106,57,0.15);
+  --red:          #7f1f1f;
+  --red-dim:      rgba(127,31,31,0.14);
 
-  --text:         #1c2633;
-  --text-muted:   #565f6b;
-  --text-dim:     #3d4957;
+  --text:         #1a2330;
+  --text-muted:   #47505c;
+  --text-dim:     #343f4c;
 }
 
 html, body {
@@ -170,9 +170,9 @@ html, body {
   container-type: inline-size;
 }
 
-/* Light: a soft shadow lifts the white cards off the grey page */
+/* Light: a soft warm shadow sets the stone panels on the terracotta */
 [data-theme="light"] .header,
-[data-theme="light"] .panel { box-shadow: 0 1px 2px rgba(28,38,51,0.08), 0 2px 8px rgba(28,38,51,0.05); }
+[data-theme="light"] .panel { box-shadow: 0 1px 2px rgba(90,40,15,0.14), 0 2px 8px rgba(90,40,15,0.10); }
 
 .panel--arrivals::before,
 .panel--departures::before {
@@ -314,14 +314,14 @@ html, body {
 /* Light: opacity fades to a washed-out grey on white, so past/upcoming rows get muted text colours instead */
 [data-theme="light"] .flight-row.slot-past {
   opacity: 1;
-  --text:       #69727e;
-  --text-dim:   #7b838d;
-  --text-muted: #7b838d;
+  --text:       #56606b;
+  --text-dim:   #69717b;
+  --text-muted: #69717b;
 }
 [data-theme="light"] .flight-row.slot-upcoming {
   opacity: 1;
-  --text:       #3d4957;
-  --text-dim:   #565f6b;
+  --text:       #343f4c;
+  --text-dim:   #47505c;
 }
 [data-theme="light"] .slot-past .city-flag,
 [data-theme="light"] .slot-past .flight-status { opacity: 0.6; }
