@@ -252,19 +252,65 @@ async function fetchAndRender() {
 const MOON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const SUN_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 
+// Light by day, dark by night, following Lisbon's sunrise and sunset. Toggling (OK on the TV remote)
+// overrides it until the next sunrise or sunset, then it goes back to automatic.
+
+const LISBON = { lat: 38.7756, lon: -9.1354 };
+
+// Sunrise and sunset for the day around `date` (sunrise equation, accurate to a minute or two)
+function sunTimes(date) {
+  const rad = Math.PI / 180;
+  const jd  = date.getTime() / 86_400_000 + 2440587.5;
+  const n   = Math.round(jd - 2451545 - 0.0009 - LISBON.lon / 360);
+  const Js  = 2451545 + 0.0009 - LISBON.lon / 360 + n;
+  const M   = (357.5291 + 0.98560028 * (Js - 2451545)) % 360;
+  const C   = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+  const L   = (M + C + 180 + 102.9372) % 360;
+  const transit = Js + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * L * rad);
+  const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
+  const w0  = Math.acos((Math.sin(-0.833 * rad) - Math.sin(LISBON.lat * rad) * Math.sin(dec)) /
+                        (Math.cos(LISBON.lat * rad) * Math.cos(dec))) / rad;
+  const toMs = j => (j - 2440587.5) * 86_400_000;
+  return { sunrise: toMs(transit - w0 / 360), sunset: toMs(transit + w0 / 360) };
+}
+
+function isDaytime(now) {
+  const { sunrise, sunset } = sunTimes(new Date(now));
+  return now >= sunrise && now < sunset;
+}
+
+function nextSunChange(now) {
+  const { sunrise, sunset } = sunTimes(new Date(now));
+  if (now < sunrise) return sunrise;
+  if (now < sunset)  return sunset;
+  return sunTimes(new Date(now + 86_400_000)).sunrise;
+}
+
+function readOverride() {
+  try { return JSON.parse(localStorage.getItem("themeOverride")); } catch { return null; }
+}
+
 function applyTheme(light) {
   document.documentElement.dataset.theme = light ? "light" : "";
   document.getElementById("theme-toggle").innerHTML = light ? MOON_SVG : SUN_SVG;
 }
 
-const savedTheme = localStorage.getItem("theme");
-applyTheme(savedTheme === "light");
+function updateTheme() {
+  const now      = Date.now();
+  const override = readOverride();
+  applyTheme(override && now < override.until ? override.light : isDaytime(now));
+}
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
-  const isLight = document.documentElement.dataset.theme === "light";
-  localStorage.setItem("theme", isLight ? "dark" : "light");
-  applyTheme(!isLight);
+  const now = Date.now();
+  const light = document.documentElement.dataset.theme !== "light";
+  try { localStorage.setItem("themeOverride", JSON.stringify({ light, until: nextSunChange(now) })); } catch {}
+  applyTheme(light);
 });
+
+try { localStorage.removeItem("theme"); } catch {} // old fixed-theme setting
+updateTheme();
+setInterval(updateTheme, 60_000);
 
 // ── Init ──────────────────────────────────────────────────────────
 

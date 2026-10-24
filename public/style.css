@@ -2,6 +2,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: dark light;
   --bg:           #08090f;
   --surface:      #0d1017;
   --surface-2:    #131825;
@@ -38,29 +39,31 @@
   --grid: 11em 1fr 9em 10.8em;
 }
 
+/* Light: Lisbon by day — limestone panels (mid-light, so the TV doesn't glare), azulejo cobalt
+   for arrivals, tram yellow for departures with ochre text on it, ink-blue type */
 [data-theme="light"] {
-  --bg:           #dfe6ef;
-  --surface:      #eaf0f7;
-  --surface-2:    #d4dde8;
-  --border:       rgba(0,0,0,0.08);
-  --border-strong:rgba(0,0,0,0.18);
+  --bg:           #c5cac4;
+  --surface:      #dde0db;
+  --surface-2:    #d1d5cf;
+  --border:       rgba(28,38,51,0.10);
+  --border-strong:rgba(28,38,51,0.20);
 
-  --cyan:         #0284c7;
-  --cyan-dim:     rgba(2,132,199,0.12);
-  --cyan-bg:      rgba(2,132,199,0.07);
+  --cyan:         #1d4f91;
+  --cyan-dim:     rgba(29,79,145,0.14);
+  --cyan-bg:      rgba(29,79,145,0.09);
 
-  --amber:        #b45309;
-  --amber-dim:    rgba(180,83,9,0.12);
-  --amber-bg:     rgba(180,83,9,0.07);
+  --amber:        #774a00;
+  --amber-dim:    rgba(224,168,28,0.32);
+  --amber-bg:     rgba(224,168,28,0.18);
 
-  --green:        #16a34a;
-  --green-dim:    rgba(22,163,74,0.15);
-  --red:          #dc2626;
-  --red-dim:      rgba(220,38,38,0.15);
+  --green:        #255a2f;
+  --green-dim:    rgba(46,106,57,0.14);
+  --red:          #8f2525;
+  --red-dim:      rgba(143,37,37,0.13);
 
-  --text:         #0f172a;
-  --text-muted:   #64748b;
-  --text-dim:     #334155;
+  --text:         #1c2633;
+  --text-muted:   #565f6b;
+  --text-dim:     #3d4957;
 }
 
 html, body {
@@ -166,6 +169,10 @@ html, body {
   position: relative;
   container-type: inline-size;
 }
+
+/* Light: a soft shadow lifts the white cards off the grey page */
+[data-theme="light"] .header,
+[data-theme="light"] .panel { box-shadow: 0 1px 2px rgba(28,38,51,0.08), 0 2px 8px rgba(28,38,51,0.05); }
 
 .panel--arrivals::before,
 .panel--departures::before {
@@ -303,6 +310,21 @@ html, body {
   opacity: 0.7;
 }
 .flight-row.slot-upcoming .city-text { font-size: 1.6em; }
+
+/* Light: opacity fades to a washed-out grey on white, so past/upcoming rows get muted text colours instead */
+[data-theme="light"] .flight-row.slot-past {
+  opacity: 1;
+  --text:       #69727e;
+  --text-dim:   #7b838d;
+  --text-muted: #7b838d;
+}
+[data-theme="light"] .flight-row.slot-upcoming {
+  opacity: 1;
+  --text:       #3d4957;
+  --text-dim:   #565f6b;
+}
+[data-theme="light"] .slot-past .city-flag,
+[data-theme="light"] .slot-past .flight-status { opacity: 0.6; }
 
 /* Empty slot: keeps its row and divider, shows a faint placeholder */
 .flight-row.slot-empty { pointer-events: none; }
