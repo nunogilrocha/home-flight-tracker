@@ -193,6 +193,7 @@ const AIRPORTS = {
   LGRP: { city: "Rhodes",         country: "Greece",       flag: "🇬🇷" },
   LTBA: { city: "Istanbul",       country: "Turkey",       flag: "🇹🇷" },
   LTFM: { city: "Istanbul",       country: "Turkey",       flag: "🇹🇷" },
+  LTBJ: { city: "Izmir",          country: "Turkey",       flag: "🇹🇷" },
   EPWA: { city: "Warsaw",         country: "Poland",       flag: "🇵🇱" },
   EPMO: { city: "Warsaw Modlin",  country: "Poland",       flag: "🇵🇱" },
   LKPR: { city: "Prague",         country: "Czechia",      flag: "🇨🇿" },
