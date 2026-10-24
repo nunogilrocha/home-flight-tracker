@@ -237,6 +237,20 @@ function distanceToRunway(lat, lon) {
   return Math.hypot(px - t * bx, py - t * by);
 }
 
+// Close to the airport and still low: just took off from Lisbon. Cascais is ~10 nm away, Montijo ~9 nm.
+function isClimbingOutOfLisbon(ac) {
+  if (typeof ac.lat !== "number" || typeof ac.lon !== "number") return false;
+  const nmFromAirport = distanceNm(LPPT.lat, LPPT.lon, ac.lat, ac.lon);
+  const height        = heightAboveAirport(ac) ?? (typeof ac.alt_baro === "number" ? ac.alt_baro : Infinity);
+  return nmFromAirport < 6 && height < 4_000;
+}
+
+function distanceNm(lat1, lon1, lat2, lon2) {
+  const x = (lon2 - lon1) * Math.cos(lat1 * Math.PI / 180) * 60;
+  const y = (lat2 - lat1) * 60;
+  return Math.hypot(x, y);
+}
+
 // Status of a departure still on the ground, plus its place in the queue (lower = leaves sooner)
 function getGroundStatus(ac) {
   const dist = typeof ac.lat === "number" ? Math.round(distanceToRunway(ac.lat, ac.lon)) : 9_999;
@@ -302,8 +316,9 @@ async function pollAircraft() {
     const nowS = Math.floor(Date.now() / 1000);
     for (const ac of liveAircraft) {
       if (!ac.hex) continue;
-      // Skip light aircraft (A1) and rotorcraft (A7) — Cascais/training/medical traffic, not LPPT flights
-      if (ac.category === "A1" || ac.category === "A7") continue;
+      // Skip light aircraft (A1) and rotorcraft (A7) — Cascais/training/medical traffic, not LPPT flights.
+      // The category often arrives a few seconds after the first position, so drop any entry made before it did.
+      if (ac.category === "A1" || ac.category === "A7") { seenAircraft.delete(ac.hex); continue; }
       // Ignore placeholder callsigns (e.g. "@@@@@@@@" from transponders with none set)
       const raw = ac.flight?.trim().toUpperCase();
       const cs  = raw && /^[A-Z0-9]+$/.test(raw) ? raw : null;
@@ -333,9 +348,14 @@ async function pollAircraft() {
       }
 
       // Route wins; otherwise climb/descent; a level plane keeps whatever it was last classified as
-      const prevType = seenAircraft.get(ac.hex)?._type ?? null;
-      const type     = classifyByRoute(cs) ?? (phase === "level" ? prevType : phase);
+      const prevType  = seenAircraft.get(ac.hex)?._type ?? null;
+      const routeType = classifyByRoute(cs);
+      const type      = routeType ?? (phase === "level" ? prevType : phase);
       if (!type) continue;
+
+      // With no known route, a newly seen climber only counts if it's climbing out of Lisbon itself —
+      // otherwise Cascais, Montijo and overflying traffic take the NOW slot with "Route unknown"
+      if (!routeType && type === "departure" && prevType !== "departure" && !isClimbingOutOfLisbon(ac)) continue;
 
       seenAircraft.set(ac.hex, {
         ...ac,
